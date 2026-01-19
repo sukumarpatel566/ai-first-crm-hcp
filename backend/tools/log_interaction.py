@@ -63,12 +63,25 @@ def log_interaction_tool(
     )
     user_prompt = _build_extraction_prompt(free_text)
 
-    raw_response = call_llm_structured(system_prompt, user_prompt, response_format={})
+    try:
+        raw_response = call_llm_structured(system_prompt, user_prompt, response_format={})
+    except Exception as llm_error:
+        # If LLM call fails, use fallback data
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"LLM call failed, using fallback: {llm_error}")
+        raw_response = None
 
     try:
-        data = json.loads(raw_response)
-    except json.JSONDecodeError:
+        if raw_response:
+            data = json.loads(raw_response)
+        else:
+            raise json.JSONDecodeError("No response from LLM", "", 0)
+    except (json.JSONDecodeError, ValueError) as parse_error:
         # Fallback: store minimal interaction with raw text only.
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"JSON parse failed, using fallback: {parse_error}")
         data = {
             "hcp_name": "Unknown",
             "specialty": None,

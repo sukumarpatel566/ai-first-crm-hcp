@@ -1,15 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { createChatInteraction, clearChatResult } from "../redux/interactionSlice";
 
-const Card = ({ children }) => (
+// Card container component
+const Card = ({ children, style = {} }) => (
   <div
     style={{
       backgroundColor: "#ffffff",
-      borderRadius: 12,
+      borderRadius: 8,
       padding: 24,
-      boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
+      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
       border: "1px solid #e2e8f0",
+      height: "calc(100vh - 120px)",
+      display: "flex",
+      flexDirection: "column",
+      ...style,
     }}
   >
     {children}
@@ -18,164 +23,212 @@ const Card = ({ children }) => (
 
 export const LogInteractionChat = () => {
   const dispatch = useDispatch();
-  const { loading = false, chatToolResult = null } = useSelector((state) => state?.interaction || {});
+  const { loading = false, chatToolResult = null, error = null } = useSelector(
+    (state) => state?.interaction || {}
+  );
 
-  const [freeText, setFreeText] = useState("");
-  const [channel, setChannel] = useState("In-Person");
+  const [messages, setMessages] = useState([]);
+  const [inputText, setInputText] = useState("");
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, chatToolResult]);
+
+  useEffect(() => {
+    if (chatToolResult?.tool_result) {
+      const tool = chatToolResult.tool_result;
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "assistant",
+          content: `Interaction logged successfully!\n\nHCP: ${tool.hcp_name || "N/A"}\nSpecialty: ${tool.specialty || "N/A"}\nProducts: ${tool.products_discussed || "N/A"}\nSentiment: ${tool.sentiment || "N/A"}\n\nSummary: ${tool.summary || "No summary available"}`,
+        },
+      ]);
+    }
+  }, [chatToolResult]);
+
+  useEffect(() => {
+    if (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          type: "assistant",
+          content: `Error: ${error}`,
+        },
+      ]);
+    }
+  }, [error]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!inputText.trim() || loading) return;
+
+    // Add user message
+    const userMessage = {
+      type: "user",
+      content: inputText,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setInputText("");
+
+    // Dispatch chat interaction
     dispatch(
       createChatInteraction({
-        free_text: freeText,
-        channel,
+        free_text: inputText,
+        channel: "Meeting", // Default, can be enhanced
       })
     );
   };
 
-  const handleClear = () => {
-    setFreeText("");
-    dispatch(clearChatResult());
-  };
-
-  const tool = chatToolResult?.tool_result || {};
-
   return (
     <Card>
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>
-        Conversational Log (AI Assisted)
-      </h2>
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }}>
-        <div style={{ display: "grid", gap: 8 }}>
-          <label style={{ fontWeight: 500 }}>Channel</label>
-          <select
-            value={channel}
-            onChange={(e) => setChannel(e.target.value)}
-            style={{ padding: 10, borderRadius: 8, border: "1px solid #cbd5f1" }}
-          >
-            <option>In-Person</option>
-            <option>Call</option>
-            <option>Virtual</option>
-          </select>
-        </div>
-
-        <div style={{ display: "grid", gap: 8 }}>
-          <label style={{ fontWeight: 500 }}>Describe the interaction</label>
-          <textarea
-            rows={6}
-            value={freeText}
-            onChange={(e) => setFreeText(e.target.value)}
-            placeholder="Example: Met Dr. Smith to discuss Product A, she was interested but requested real-world data..."
-            style={{
-              padding: 10,
-              borderRadius: 8,
-              border: "1px solid #cbd5f1",
-              resize: "vertical",
-            }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading || !freeText.trim()}
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
+        <h2
           style={{
-            marginTop: 8,
-            padding: "10px 16px",
-            borderRadius: 999,
-            border: "none",
-            background: loading ? "#cbd5f1" : "linear-gradient(90deg,#2563eb,#4f46e5)",
-            color: "white",
+            fontSize: 18,
             fontWeight: 600,
-            cursor: loading || !freeText.trim() ? "default" : "pointer",
+            color: "#1e293b",
+            marginBottom: 4,
+            marginTop: 0,
           }}
         >
-          {loading ? "Processing..." : "Let AI Structure It"}
-        </button>
-      </form>
+          AI Assistant
+        </h2>
+        <p
+          style={{
+            fontSize: 13,
+            color: "#64748b",
+            margin: 0,
+          }}
+        >
+          Log interaction via chat
+        </p>
+      </div>
 
-      {tool.interaction_id && (
-        <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #e2e8f0" }}>
+      {/* Messages Area */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          marginBottom: 16,
+          padding: "16px 0",
+          borderTop: "1px solid #e2e8f0",
+          borderBottom: "1px solid #e2e8f0",
+        }}
+      >
+        {messages.length === 0 ? (
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 8,
+              padding: "40px 20px",
+              textAlign: "center",
+              color: "#94a3b8",
+              fontSize: 14,
+              fontStyle: "italic",
             }}
           >
-            <h3 style={{ fontSize: 16, fontWeight: 600 }}>AI Extracted Summary</h3>
-            <button
-              type="button"
-              onClick={handleClear}
-              style={{
-                border: "none",
-                background: "transparent",
-                color: "#64748b",
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-            >
-              Clear
-            </button>
+            Log interaction details here (e.g. 'Met Dr. Smith, discussed Product X...')
           </div>
-
-          <p style={{ fontSize: 14, color: "#4b5563", marginBottom: 12 }}>
-            {tool.summary || "No summary available."}
-          </p>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 12,
-              fontSize: 13,
-              color: "#475569",
-            }}
-          >
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>HCP</div>
-              <div>{tool.hcp_name}</div>
-              <div style={{ color: "#6b7280" }}>{tool.specialty}</div>
-            </div>
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>Products Discussed</div>
-              <div>{tool.products_discussed || "N/A"}</div>
-            </div>
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>Sentiment</div>
-              <span
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {messages.map((msg, index) => (
+              <div
+                key={index}
                 style={{
-                  padding: "2px 8px",
-                  borderRadius: 999,
-                  backgroundColor: "#eff6ff",
-                  color: "#1d4ed8",
+                  alignSelf: msg.type === "user" ? "flex-end" : "flex-start",
+                  maxWidth: "85%",
                 }}
               >
-                {tool.sentiment || "N/A"}
-              </span>
-            </div>
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>Follow-up Action</div>
-              <div>{tool.follow_up_action || "N/A"}</div>
-            </div>
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    borderRadius: 8,
+                    backgroundColor:
+                      msg.type === "user" ? "#2563eb" : "#f1f5f9",
+                    color: msg.type === "user" ? "#ffffff" : "#1e293b",
+                    fontSize: 14,
+                    lineHeight: 1.5,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div
+                style={{
+                  alignSelf: "flex-start",
+                  padding: "12px 16px",
+                  borderRadius: 8,
+                  backgroundColor: "#f1f5f9",
+                  fontSize: 14,
+                  color: "#64748b",
+                }}
+              >
+                Processing...
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
+        )}
+      </div>
 
-          <p
+      {/* Input Area */}
+      <form onSubmit={handleSubmit}>
+        <div style={{ display: "flex", gap: 8 }}>
+          <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Type your interaction details here..."
+            rows={3}
             style={{
-              marginTop: 16,
-              fontSize: 12,
-              color: "#6b7280",
+              flex: 1,
+              padding: "10px 12px",
+              borderRadius: 6,
+              border: "1px solid #cbd5e1",
+              fontSize: 14,
+              fontFamily: "Inter, sans-serif",
+              resize: "none",
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
+          />
+          <button
+            type="submit"
+            disabled={loading || !inputText.trim()}
+            style={{
+              padding: "12px 24px",
+              borderRadius: 6,
+              border: "none",
+              background:
+                loading || !inputText.trim() ? "#cbd5e1" : "#2563eb",
+              color: "#ffffff",
+              fontSize: 14,
+              fontWeight: 600,
+              cursor:
+                loading || !inputText.trim() ? "not-allowed" : "pointer",
+              fontFamily: "Inter, sans-serif",
+              alignSelf: "flex-end",
+              whiteSpace: "nowrap",
             }}
           >
-            Review the extracted details above in your CRM context before treating this
-            as final. This module shows a confirmation view; persistence is already
-            handled server-side.
-          </p>
+            Log
+          </button>
         </div>
-      )}
+      </form>
     </Card>
   );
 };
 
 export default LogInteractionChat;
-

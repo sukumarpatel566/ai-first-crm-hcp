@@ -4,7 +4,7 @@ An end-to-end, **AI-First CRM interaction logging module** for Healthcare Profes
 
 - **FastAPI + SQLAlchemy + SQLite** backend (PostgreSQL supported via DATABASE_URL)
 - **LangGraph agent** orchestrating tools
-- **Groq LLM (`gemma2-9b-it`)** for reasoning, extraction, and recommendations
+- **Groq LLM (`llama-3.3-70b-versatile`)** for reasoning, extraction, and recommendations
 - **React + Redux** frontend with a modern **Inter**-based UI
 
 This module focuses on the **HCP Interaction Log Screen** with **two modes**:
@@ -213,7 +213,7 @@ All tools are pure Python functions that take a **SQLAlchemy `Session`** plus ke
 
 - Uses official **Groq Python SDK**:
   - `groq==0.11.0` (pinned in `backend/requirements.txt`).
-  - Model: **`gemma2-9b-it`** (as required).
+  - Model: **`llama-3.3-70b-versatile`** (Groq-supported model).
 - Key helpers:
   - `call_llm_system_prompt(system_prompt, user_content) -> str`
     - Classic system + user messaging.
@@ -379,7 +379,7 @@ When recording a demo video, consider the following structure:
   - Briefly explain:
     - `backend/agents/hcp_agent.py` – the orchestrating agent.
     - `backend/tools/*` – domain-specific tools.
-    - `backend/llm_client.py` – Groq integration (gemma2-9b-it).
+    - `backend/llm_client.py` – Groq integration (llama-3.3-70b-versatile).
     - `frontend/src/components/*` – form and chat UIs.
 
 - **3. Live Demo – Structured Form Mode (60–90 seconds)**

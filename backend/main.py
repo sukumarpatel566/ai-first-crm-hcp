@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5,6 +7,12 @@ from backend.database import engine
 from backend.models.models import Base
 from backend.routes.interaction import router as interaction_router
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 # Create all tables on startup (simple approach for a module demo).
 Base.metadata.create_all(bind=engine)
@@ -15,18 +23,19 @@ app = FastAPI(
     description="FastAPI backend with LangGraph + Groq-powered HCP interaction logging.",
 )
 
-# Allow local frontend development on common ports.
+# CORS Middleware - MUST be added before routes are registered
+# This allows the React frontend (http://localhost:3000) to make API calls
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+logger.info("FastAPI app initialized with CORS enabled for http://localhost:3000")
+
+# Register routes AFTER CORS middleware
 app.include_router(interaction_router)
 
 

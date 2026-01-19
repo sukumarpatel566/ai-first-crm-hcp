@@ -20,10 +20,40 @@ export const createChatInteraction = createAsyncThunk(
   "interaction/createChat",
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`${API_BASE}/interactions/chat`, payload);
-      return res.data;
+      const res = await axios.post(
+        `${API_BASE}/interactions/chat`,
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      
+      // Ensure we have a valid response
+      if (res.status >= 200 && res.status < 300) {
+        return res.data;
+      } else {
+        return rejectWithValue({
+          detail: `Unexpected status: ${res.status}`,
+        });
+      }
     } catch (err) {
-      return rejectWithValue(err.response?.data || { detail: "Error creating chat interaction" });
+      // Extract error message from response
+      const errorMessage = err.response?.data?.detail || 
+                           err.response?.data?.message ||
+                           err.message ||
+                           "Error creating chat interaction";
+      
+      console.error("Chat interaction error:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: errorMessage,
+      });
+      
+      return rejectWithValue({
+        detail: errorMessage,
+      });
     }
   }
 );

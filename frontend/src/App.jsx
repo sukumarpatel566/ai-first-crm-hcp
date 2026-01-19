@@ -67,115 +67,65 @@ const App = () => {
   
   // Hooks must be called unconditionally
   const dispatch = useDispatch();
-  const { mode = "form", error = null } = useSelector((state) => state?.interaction || {});
-
-  const toggleMode = (newMode) => {
-    dispatch(setMode(newMode));
-    dispatch(clearError());
-  };
-
-  // Ensure we always return visible content
-  if (!mode) {
-    console.warn("Mode is undefined, defaulting to 'form'");
-  }
+  const { error = null } = useSelector((state) => state?.interaction || {});
 
   return (
     <div
       style={{
         minHeight: "100vh",
         width: "100%",
-        background: "radial-gradient(circle at top left, #eef2ff, #f9fafb)",
+        background: "#f5f7fa",
         fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
-      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "32px 16px 48px" }}>
-        <header style={{ marginBottom: 32 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: -0.03 }}>
-                AI-First CRM – HCP Interaction Log
-              </h1>
-              <p style={{ marginTop: 8, color: "#6b7280", fontSize: 14, maxWidth: 560 }}>
-                Capture Healthcare Professional interactions either via a structured form
-                or conversationally. The AI agent structures notes, extracts entities,
-                and recommends next best actions in your CRM workflow.
-              </p>
-            </div>
-            <span
-              style={{
-                fontSize: 12,
-                padding: "4px 10px",
-                borderRadius: 999,
-                backgroundColor: "#e0f2fe",
-                color: "#0369a1",
-                border: "1px solid #bae6fd",
-              }}
-            >
-              Powered by LangGraph + Groq (gemma2-9b-it)
-            </span>
-          </div>
-        </header>
-
-        <div
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "24px 20px" }}>
+        {/* Page Title */}
+        <h1
           style={{
-            display: "inline-flex",
-            borderRadius: 999,
-            padding: 3,
-            backgroundColor: "#e5e7eb",
-            marginBottom: 20,
+            fontSize: 24,
+            fontWeight: 600,
+            color: "#1e293b",
+            marginBottom: 24,
+            letterSpacing: "-0.02em",
           }}
         >
-          <button
-            type="button"
-            onClick={() => toggleMode("form")}
-            style={{
-              padding: "6px 16px",
-              borderRadius: 999,
-              border: "none",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-              backgroundColor: mode === "form" ? "#ffffff" : "transparent",
-              boxShadow: mode === "form" ? "0 6px 18px rgba(15,23,42,0.10)" : "none",
-            }}
-          >
-            Structured Form
-          </button>
-          <button
-            type="button"
-            onClick={() => toggleMode("chat")}
-            style={{
-              padding: "6px 16px",
-              borderRadius: 999,
-              border: "none",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-              backgroundColor: mode === "chat" ? "#ffffff" : "transparent",
-              boxShadow: mode === "chat" ? "0 6px 18px rgba(15,23,42,0.10)" : "none",
-            }}
-          >
-            Conversational Chat
-          </button>
-        </div>
+          Log HCP Interaction
+        </h1>
 
         {error && (
           <div
             style={{
               marginBottom: 16,
-              padding: "10px 14px",
-              borderRadius: 12,
+              padding: "12px 16px",
+              borderRadius: 8,
               backgroundColor: "#fef2f2",
               color: "#991b1b",
-              fontSize: 13,
+              fontSize: 14,
               border: "1px solid #fecaca",
             }}
           >
-            {error}
+            {typeof error === "string" ? error : error?.detail || "An error occurred"}
           </div>
         )}
 
-        {mode === "form" ? <LogInteractionForm /> : <LogInteractionChat />}
+        {/* Two-Column Layout */}
+        <div
+          style={{
+            display: "flex",
+            gap: 20,
+            alignItems: "flex-start",
+          }}
+        >
+          {/* Left Panel - Form (70%) */}
+          <div style={{ flex: "0 0 70%", minWidth: 0 }}>
+            <LogInteractionForm />
+          </div>
+
+          {/* Right Panel - AI Assistant (30%) */}
+          <div style={{ flex: "0 0 30%", minWidth: 0 }}>
+            <LogInteractionChat />
+          </div>
+        </div>
       </div>
     </div>
   );

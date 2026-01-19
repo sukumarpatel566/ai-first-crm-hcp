@@ -8,7 +8,7 @@ from typing import List, Dict, Any
 
 from groq import Groq
 
-GROQ_MODEL = "gemma2-9b-it"
+GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
 def _get_client() -> Groq:

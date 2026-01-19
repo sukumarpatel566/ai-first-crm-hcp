@@ -98,28 +98,76 @@ def log_chat_interaction(
     Delegates to the LangGraph HCP agent which in turn uses the log_interaction tool.
     The frontend is expected to confirm with the user before persisting in the UI flow.
     """
-    agent = build_hcp_agent(db)
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    try:
+        if not payload.free_text or not payload.free_text.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="free_text is required and cannot be empty"
+            )
+        
+        logger.info(f"Processing chat interaction: {payload.free_text[:100]}...")
+        
+        agent = build_hcp_agent(db)
 
-    initial_state: AgentState = {
-        "user_input": payload.free_text,
-        "context": {
-            "channel": payload.channel,
-            "interaction_date": payload.interaction_date or datetime.utcnow(),
-        },
-    }
+        initial_state: AgentState = {
+            "user_input": payload.free_text,
+            "context": {
+                "channel": payload.channel or "Meeting",
+                "interaction_date": payload.interaction_date or datetime.utcnow(),
+            },
+        }
 
-    # Run the agent; we take the final state from the generator
-    final_state: AgentState = {}
-    for step in agent.stream(initial_state):
-        # step is an iterator of events; the last one contains the full state
-        for _, state in step.items():
-            final_state = state  # overwrite until the end
+        # Run the agent; we take the final state from the generator
+        final_state: AgentState = {}
+        try:
+            for step in agent.stream(initial_state):
+                # step is an iterator of events; the last one contains the full state
+                for node_name, state in step.items():
+                    final_state = state  # overwrite until the end
+                    logger.debug(f"Agent step: {node_name}, state keys: {list(state.keys())}")
+        except Exception as agent_error:
+            logger.error(f"Agent execution error: {agent_error}", exc_info=True)
+            return {
+                "error": True,
+                "message": f"Agent execution failed: {str(agent_error)}",
+            }
 
-    tool_result = final_state.get("tool_result") or {}
-    return {
-        "intent": final_state.get("intent"),
-        "tool_result": tool_result,
-    }
+        tool_result = final_state.get("tool_result")
+        intent = final_state.get("intent", "log_interaction")
+        
+        # Ensure tool_result is always a dict
+        if not isinstance(tool_result, dict):
+            logger.warning(f"tool_result is not a dict: {type(tool_result)}, value: {tool_result}")
+            tool_result = {
+                "error": True,
+                "message": f"Unexpected tool result type: {type(tool_result)}",
+            }
+        
+        logger.info(f"Agent completed with intent: {intent}, tool_result keys: {list(tool_result.keys()) if isinstance(tool_result, dict) else 'N/A'}")
+        
+        # If tool_result has error, return error response
+        if isinstance(tool_result, dict) and tool_result.get("error"):
+            return tool_result
+        
+        # Ensure we always return a valid structured dict response
+        response = tool_result.copy() if isinstance(tool_result, dict) else {}
+        response["status"] = "success"
+        response["intent"] = intent
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in log_chat_interaction: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 
 @router.get("/{interaction_id}", response_model=InteractionResponse)
